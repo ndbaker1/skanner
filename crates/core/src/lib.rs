@@ -3,13 +3,14 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 type Pid = i32;
 
-pub struct Process {
+#[derive(Clone)]
+pub struct ProcessHandle {
     pid: Pid,
     handle: process_memory::ProcessHandle,
     proc_maps: Vec<proc_maps::MapRange>,
 }
 
-impl Process {
+impl ProcessHandle {
     pub fn new(pid: Pid) -> Self {
         Self {
             pid,
@@ -39,35 +40,33 @@ impl Process {
     }
 }
 
-pub enum ValueScanType {
-    First,
-    Next,
+pub enum ScanType {
+    Initialize,
+    Prune,
 }
 
-pub trait ValueScanner {
+pub trait MemoryScanner {
     /// scan process memory for a value given a compile-type data type
     fn find_values<T: Clone + Copy + Sync>(
         &mut self,
         value: &T,
         condition: impl Fn(&T, &T) -> bool + Sync,
-        scan_type: ValueScanType,
+        scan_type: ScanType,
     ) -> Result<&Vec<usize>>;
-}
 
-pub trait PointerScanner {
     /// search for pointers in memory which are referencing a given address
     fn find_pointers(&self, address: usize) -> Result<Vec<usize>>;
 }
 
-pub struct OmniScanner<'p> {
+pub struct DefaultScanner {
     /// process handle to read memory
-    process: &'p Process,
+    process: ProcessHandle,
     /// possible locations which have the target value
     candidates: Vec<usize>,
 }
 
-impl<'p> OmniScanner<'p> {
-    pub fn new(process: &'p Process) -> Self {
+impl DefaultScanner {
+    pub fn new(process: ProcessHandle) -> Self {
         Self {
             process,
             candidates: Default::default(),
@@ -75,15 +74,15 @@ impl<'p> OmniScanner<'p> {
     }
 }
 
-impl ValueScanner for OmniScanner<'_> {
+impl MemoryScanner for DefaultScanner {
     fn find_values<T: Clone + Copy + Sync>(
         &mut self,
         value: &T,
         cond: impl Fn(&T, &T) -> bool + Sync,
-        scan_type: ValueScanType,
+        scan_type: ScanType,
     ) -> Result<&Vec<usize>> {
         match scan_type {
-            ValueScanType::First => {
+            ScanType::Initialize => {
                 self.candidates = Default::default();
 
                 let (sender, receiver) = std::sync::mpsc::channel();
@@ -94,7 +93,6 @@ impl ValueScanner for OmniScanner<'_> {
                     .into_par_iter()
                     .filter(|map| map.is_read() && map.is_write() && map.filename().is_none())
                     .for_each_with(sender, |s, map| {
-                        eprintln!("{:?}", map);
                         for offset in (0..map.size()).map(|i| i + map.start()) {
                             if let Ok(copied) = self.process.read_mem(offset) {
                                 if cond(value, &copied) {
@@ -106,7 +104,7 @@ impl ValueScanner for OmniScanner<'_> {
 
                 self.candidates = receiver.into_iter().collect();
             }
-            ValueScanType::Next => {
+            ScanType::Prune => {
                 self.candidates.retain(|address| {
                     self.process
                         .read_mem(*address)
@@ -115,11 +113,9 @@ impl ValueScanner for OmniScanner<'_> {
             }
         }
 
-        eprintln!("{:#?}", self.candidates);
         Ok(&self.candidates)
     }
-}
-impl PointerScanner for OmniScanner<'_> {
+
     fn find_pointers(&self, address: usize) -> Result<Vec<usize>> {
         let mut pointers = Vec::new();
 
