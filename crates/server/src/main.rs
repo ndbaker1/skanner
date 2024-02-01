@@ -6,9 +6,9 @@ use axum::{
     routing::get,
     Json, Router,
 };
-use binary_vulture::{DefaultScanner, MemoryScanner, ProcessHandle, ScanType};
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
+use vulture::{DefaultScanner, MemoryScanner, ProcessHandle, ScanType};
 
 #[derive(Default)]
 struct AState {
@@ -40,7 +40,7 @@ struct Attach {
     pid: u32,
 }
 
-async fn attach<'a>(Query(Attach { pid }): Query<Attach>, State(state): State<ServerState>) {
+async fn attach(Query(Attach { pid }): Query<Attach>, State(state): State<ServerState>) {
     let proc = ProcessHandle::new(pid as _);
     let scanner = DefaultScanner::new(proc.clone());
 
@@ -58,7 +58,7 @@ struct ScanResponse {
 }
 
 async fn scan(
-    Query(scan): Query<ScanRequest>,
+    Query(_scan): Query<ScanRequest>,
     State(state): State<ServerState>,
 ) -> (StatusCode, Json<ScanResponse>) {
     let mut state = state.lock().await;

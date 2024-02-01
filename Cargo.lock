@@ -120,25 +120,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "binary-vulture"
-version = "0.1.0"
-dependencies = [
- "proc-maps",
- "process-memory",
- "rayon",
-]
-
-[[package]]
-name = "binary-vulture-server"
-version = "0.1.0"
-dependencies = [
- "axum",
- "binary-vulture",
- "serde",
- "tokio",
-]
-
-[[package]]
 name = "bindgen"
 version = "0.68.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -962,6 +943,25 @@ name = "unicode-ident"
 version = "1.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3354b9ac3fae1ff6755cb6db53683adb661634f67557942dea4facebec0fee4b"
+
+[[package]]
+name = "vulture"
+version = "0.1.0"
+dependencies = [
+ "proc-maps",
+ "process-memory",
+ "rayon",
+]
+
+[[package]]
+name = "vulture-server"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "serde",
+ "tokio",
+ "vulture",
+]
 
 [[package]]
 name = "wasi"
