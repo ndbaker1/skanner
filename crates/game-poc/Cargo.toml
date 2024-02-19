@@ -1,12 +1,12 @@
 [package]
-name = "vulture-server"
+name = "game-poc"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-axum = "0.7.4"
-vulture = { path = "../core" }
+vulture = { path = "../vulture" }
 serde = { version = "1.0.196", features = ["derive"] }
-tokio = { version = "1.35.1" }
+reqwest = { version = "0.11", features = ["blocking", "json"] }
+serde_json = "1.0.113"

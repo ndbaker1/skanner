@@ -17,7 +17,7 @@ impl ProcessHandle {
             handle: (pid as process_memory::Pid)
                 .try_into_process_handle()
                 .unwrap(),
-            proc_maps: proc_maps::get_process_maps(pid).unwrap(),
+            proc_maps: proc_maps::get_process_maps(pid as proc_maps::Pid).unwrap(),
         }
     }
 
@@ -93,6 +93,7 @@ impl MemoryScanner for DefaultScanner {
                     .into_par_iter()
                     .filter(|map| map.is_read() && map.is_write() && map.filename().is_none())
                     .for_each_with(sender, |s, map| {
+                        eprintln!("{:?}", map);
                         for offset in (0..map.size()).map(|i| i + map.start()) {
                             if let Ok(copied) = self.process.read_mem(offset) {
                                 if cond(value, &copied) {
