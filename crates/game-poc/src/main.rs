@@ -190,11 +190,13 @@ impl BBSet {
         }) {
             // when a value is updated, create a new scan call for it.
             if word.text != bbox.text {
+                println!("replacing bbox text '{}' with '{}'", bbox.text, word.text);
                 word.text = bbox.text.to_string();
                 return Some((true, word.clone()));
             }
             None
         } else {
+            println!("creating bbox with text: '{}'", bbox.text);
             self.items.push(bbox.clone());
             Some((false, bbox.clone()))
         }

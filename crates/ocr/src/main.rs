@@ -30,13 +30,24 @@ async fn ocr(body: Bytes) -> impl IntoResponse {
     println!("handling ocr job request..");
 
     let mut ocr = get_ocr().unwrap();
+    #[cfg(debug_assertions)]
+    {
+        use std::io::Write;
+        std::fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .open("./screen-shot.png")
+            .unwrap()
+            .write_all(&body.as_bytes())
+            .unwrap();
+    }
     ocr = ocr.set_image_from_mem(body.as_bytes()).unwrap();
     // reads an XML document containing the OCR information
     let ocr_words: Vec<OCRWord> = ocr
         .get_hocr_text(0)
         .unwrap()
         .lines()
-        .flat_map(|line| parse_box(line))
+        .flat_map(parse_box)
         .collect();
 
     Json(ocr_words)
@@ -50,12 +61,13 @@ fn get_ocr() -> Res<Tesseract> {
 }
 
 fn parse_box(line: &str) -> Res<OCRWord> {
-    let reg = Regex::new(r"bbox (\d+) (\d+) (\d+) (\d+); .+x_wconf (\d+).+>(.*)</span>").unwrap();
+    let reg = Regex::new(r"bbox (\d+) (\d+) (\d+) (\d+); x_wconf (\d+).+>(.*)</span>").unwrap();
     for (_, [x1, y1, x2, y2, confidence, text]) in
         reg.captures_iter(line).take(5).map(|c| c.extract())
     {
         let confidence = confidence.parse().unwrap();
         if confidence < 30 {
+            println!("skipping candidate with confidence: {confidence}");
             continue;
         }
         return Ok(OCRWord {
