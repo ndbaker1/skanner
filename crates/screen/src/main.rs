@@ -47,6 +47,18 @@ async fn capture(Query(capture_request): Query<CaptureRequest>) -> impl IntoResp
         )
         .unwrap();
 
+    #[cfg(debug_assertions)]
+    {
+        use std::io::Write;
+        std::fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .open("./screen-shot.png")
+            .unwrap()
+            .write_all(&img_data)
+            .unwrap();
+    }
+
     println!("reponding with image data..");
     img_data
 }
